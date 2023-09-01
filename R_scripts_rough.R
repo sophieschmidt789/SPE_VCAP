@@ -449,6 +449,576 @@ print(bedNONSPE)
 view(bedNONSPE)#looks good
 write.table(bedNONSPE, "NONSPE.genes.bed")
 
+write_tsv(bedNONSPE, "NONSPE.genes5.tsv")
+write.table(bedNONSPE, "NONSPE.genes.bed")
+
+nonSPE <- read_tsv("NONSPE.genes5.tsv")
+view(nonSPE)
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Compling TPM background averages~~~~~~~~~~~~~~~~~~~~~~~~
+#1. Make B73 reference with all 1:0 1:many pangene : B73v5ID so we can inner join all by pangene
+B73 <- read_tsv("B73.tsv.txt") %>% as.data.frame() # 47,735 rows
+B73 <- B73[!grepl('chr', B73$Geneid),] 
+view(B73)#33,599, removes all pan genes that don't match with a v5 gene id - includes chr in name
+#2. Load in all 25 other files for TPM counts
+B97 <- read_tsv("B97_full-tpm.tsv.txt") %>% as.data.frame()
+CML103 <- read_tsv("CML103.tsv.txt") %>% as.data.frame()
+CML228 <- read_tsv("CML228.tsv.txt") %>% as.data.frame()
+CML247 <- read_tsv("CML247.tsv.txt") %>% as.data.frame()
+CML277 <- read_tsv("CML277.tsv.txt") %>% as.data.frame()
+CML322 <- read_tsv("CML322.tsv.txt") %>% as.data.frame()
+CML333 <- read_tsv("CML333.tsv.txt") %>% as.data.frame()
+CML52 <- read_tsv("CML52.tsv.txt") %>% as.data.frame()
+CML69 <- read_tsv("CML69.tsv.txt") %>% as.data.frame()
+HP301 <- read_tsv("HP301.tsv.txt") %>% as.data.frame()
+IL14H <- read_tsv("IL14H.tsv.txt") %>% as.data.frame()
+Ki11 <- read_tsv("Ki11.tsv.txt") %>% as.data.frame()
+Ki3 <- read_tsv("Ki3.tsv.txt") %>% as.data.frame()
+Ky21 <- read_tsv("Ky21.tsv.txt") %>% as.data.frame()
+M162W <- read_tsv("M162W.tsv.txt") %>% as.data.frame()
+M37W <- read_tsv("M37W.tsv.txt") %>% as.data.frame()
+Mo18W <- read_tsv("Mo18W.tsv.txt") %>% as.data.frame()
+MS71 <- read_tsv("MS71.tsv.txt") %>% as.data.frame()
+NC350 <- read_tsv("NC350.tsv.txt") %>% as.data.frame()
+NC358 <- read_tsv("NC358.tsv.txt") %>% as.data.frame()
+Oh43 <- read_tsv("Oh43.tsv.txt") %>% as.data.frame()
+Oh7b <- read_tsv("Oh7b.tsv.txt") %>% as.data.frame()
+P39 <- read_tsv("P39.tsv.txt") %>% as.data.frame()
+Tx303 <- read_tsv("Tx303.tsv.txt") %>% as.data.frame()
+Tzi8 <- read_tsv("Tzi8.tsv.txt") %>% as.data.frame()
+
+#3. Set up function to remove rows other than pangeneid and TPM data (geneid, chr, start, entd, strand, length)
+format_TPM <- function(arg1) { #this makes the function. arg1 is a variable that stays consistant and doesn't matter what it's called
+  new <- select(arg1, -c(Geneid, Chr, Start, End, Strand, Length)) #new is a dataframe that is made by removing Geneid, chr, start, end, strand, lenth
+  return(new)
+}
+view(Tzi8)
+#3.1 now to do this for all 25...
+B97 <- format_TPM(B97) #works!
+CML103 <- format_TPM(CML103)
+CML228 <- format_TPM(CML228)
+CML247 <- format_TPM(CML247)
+CML277 <- format_TPM(CML277)
+CML322 <- format_TPM(CML322)
+CML333 <- format_TPM(CML333)
+CML52 <- format_TPM(CML52)
+CML69 <- format_TPM(CML69)
+HP301 <- format_TPM(HP301)
+IL14H <- format_TPM(IL14H)
+Ki11 <- format_TPM(Ki11)
+Ki3 <- format_TPM(Ki3)
+Ky21 <- format_TPM(Ky21)
+M162W <- format_TPM(M162W)
+M37W <- format_TPM(M37W)
+Mo18W <- format_TPM(Mo18W)
+MS71 <- format_TPM(MS71)
+NC350 <- format_TPM(NC350)
+NC358 <- format_TPM(NC358)
+Oh43 <- format_TPM(Oh43)
+Oh7b <- format_TPM(Oh7b)
+P39 <- format_TPM(P39)
+Tx303 <- format_TPM(Tx303)
+Tzi8 <- format_TPM(Tzi8)
+view(Tzi8)
+
+#4. innerjoin all onto B73 by PanGeneID using tidyvrse reduce
+TPM_lists = list(B73, B97, CML103, CML228, CML247, CML277, CML322, CML333, CML52, CML69, HP301, IL14H, Ki11, Ki3, Ky21, M162W, M37W, Mo18W, MS71, NC350, NC358, Oh43, Oh7b, P39, Tx303, Tzi8) #writes all dataframes as list
+str(TPM_lists)
+all_TPMs <- TPM_lists %>% reduce(left_join, by='PanGeneID') %>% .[!grepl('chr', .$Geneid),] #more efficient, uses left_join because all pan-genes aren't present in B73 by PanGeneID column
+str(all_TPMs)
+#view(all_TPMs) #there are NA values because some pangenes weren't present in all of the genotypes
+write_tsv(all_TPMs, "all_TPMs.tsv")
+
+all_TPMs <- read_tsv("all_TPMs.tsv") %>% as.data.frame()
+head(all_TPMs)
+
+#5. Take averages of all tissues:
+# test B73$embryo_avg <- rowMeans(B73 %>% select(contains("embryo")), na.rm=TRUE) 
+# view(B73) #worked
+all_TPMs$embryo_avg <- rowMeans(all_TPMs %>% select(contains("embryo")), na.rm=TRUE) #add new col for embryo average for all columns that contain string 'embryo'
+all_TPMs$endosperm_avg <- rowMeans(all_TPMs %>% select(contains("endosperm")), na.rm=TRUE) #add new col for embryo average for all columns that contain string 'embryo'
+all_TPMs$root_avg <- rowMeans(all_TPMs %>% select(contains("root")), na.rm=TRUE) #add new col for embryo average for all columns that contain string 'embryo'
+all_TPMs$shoot_avg <- rowMeans(all_TPMs %>% select(contains("shoot")), na.rm=TRUE) #add new col for embryo average for all columns that contain string 'embryo'
+all_TPMs$anther_avg <- rowMeans(all_TPMs %>% select(contains("anther")), na.rm=TRUE) #add new col for embryo average for all columns that contain string 'embryo'
+all_TPMs$leafbase_avg <- rowMeans(all_TPMs %>% select(contains("base")), na.rm=TRUE) #add new col for embryo average for all columns that contain string 'embryo'
+all_TPMs$leafmiddle_avg <- rowMeans(all_TPMs %>% select(contains("middle")), na.rm=TRUE) #add new col for embryo average for all columns that contain string 'embryo'
+all_TPMs$leaftip_avg <- rowMeans(all_TPMs %>% select(contains("tip")), na.rm=TRUE) #add new col for embryo average for all columns that contain string 'embryo'
+all_TPMs$ear_avg <- rowMeans(all_TPMs %>% select(contains("ear")), na.rm=TRUE) #add new col for embryo average for all columns that contain string 'embryo'
+all_TPMs$tassel_avg <- rowMeans(all_TPMs %>% select(contains("tassel")), na.rm=TRUE) #add new col for embryo average for all columns that contain string 'embryo'
+
+all_TPMs$total_avg <- rowMeans(all_TPMs[ ,(8:509)], na.rm=TRUE) #average across all tissues from all samples
+colnames(all_TPMs) #shows up
+view(all_TPMs$total_avg) #values are there, everything is in scientific notation
+head(all_TPMs) #values print out normal
+
+#6. Save in bedfile format
+colnames(all_TPMs)
+bedTPM_avgs <- all_TPMs[,c('Chr', 'Start', 'End', 'Geneid', 'Strand', 'Length', 'embryo_avg', 'endosperm_avg', 'root_avg', 'shoot_avg', 'anther_avg', 'leafbase_avg', 'leafmiddle_avg', 'leaftip_avg', 'ear_avg', 'tassel_avg', 'total_avg')] #pulling out columns I want for BED file format
+head(bedTPM_avgs) #shows just with ID info and tissue avgs
+#6.1 first remove chr from chromosomes
+bedTPM_avgs$Chr <- str_replace(bedTPM_avgs$Chr, "chr", "")
+#6.2 write as BED and TSV
+write.table(bedTPM_avgs, "TPM_avgs.bed")
+write_tsv(bedTPM_avgs, "TPM_avgs.tsv")
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#Distributions for length and expression levels in SPE and NONSPE in both our SPE/NON bed files and the TPM data
+#1. Create distribution for all TPM frequency (all tissue average) and all length
+TPM_avgs <- read_tsv("TPM_avgs.tsv") %>% as.data.frame()
+view(TPM_avgs)
+head(TPM_avgs$total_avg)
+hist(TPM_avgs$total_avg, breaks = 10000, xlim = c(0,150), main = "Histogram for TPM tissue averages all genes", 
+     xlab = "TPM Reads Average all Tissues", ylab = "# of genes in bin") #makes histogram for TPM expression
+axis(side=1, at=seq(0,10000, 100))
+
+view(TPM_avgs$Length)
+hist(TPM_avgs$Length, breaks = 800, xlim = c(0,40000), main = "Histogram for gene length (TPM data)", 
+     xlab = "Length", ylab = "# of genes in bin") #makes histogram for Length.
+axis(side=1, at=seq(0,40000, 1000))
+
+
+#2. Create distribution for SPE genes TPM frequency (all tissue average)
+unique_SPE <- read_tsv("SPE.genes5.tsv") %>% as.data.frame()
+v5_SPE <- select(unique_SPE, v5geneID, v5length) #pull out v5ID and length from conversion
+view(v5_SPE) #9630 
+str(v5_SPE)
+TPM_avgs$Geneid <- substr(TPM_avgs$Geneid, start = 1, stop = 15) #turns to conventional v5 gene id by removing the last 5 characters
+view(TPM_avgs)
+colnames(v5_SPE)[1] <- ("Geneid") #rename v5 gene ID column for ease of inner join
+unique_SPE_TPM <- inner_join(v5_SPE, TPM_avgs, by = "Geneid")
+str(unique_SPE_TPM) #8237
+view(unique_SPE_TPM)
+
+hist(unique_SPE_TPM$total_avg, breaks = 10000, xlim = c(0,150), main = "Histogram for TPM tissue averages SPE genes", 
+     xlab = "TPM Reads Average all Tissues", ylab = "# of genes in bin") #makes histogram for TPM expression SPE
+
+#3. Create distribution for nonSPE genes TPM frequency (all tissue average)
+
+unique_nonSPE <- read_tsv("NONSPE.genes5.tsv")
+v5_nonSPE <- select(unique_nonSPE, v5geneID, v5length) #pull out v5ID and length from conversion
+view(v5_nonSPE) # 23,716
+colnames(v5_nonSPE)[1] <- ("Geneid")
+unique_nonSPE_TPM <- inner_join(v5_nonSPE, TPM_avgs, by = "Geneid")
+view(unique_nonSPE_TPM) #21,529 
+
+hist(unique_nonSPE_TPM$total_avg, breaks = 10000, xlim = c(0,150), main = "Histogram for TPM tissue averages nonSPE genes", 
+     xlab = "TPM Reads Average all Tissues", ylab = "# of genes in bin") #makes histogram for TPM expression nonSPE
+
+write_tsv(unique_nonSPE_TPM, "unique_nonSPE_TPM.tsv") #contains v5 geneid, bed file length, tpm length
+write_tsv(unique_SPE_TPM, "unique_SPE_TPM.tsv")
+
+view(unique_SPE_TPM)
+#4. Create distribution for SPE gene length from previous BED files (v5length column)
+unique_SPE_TPM <- read_tsv("unique_SPE_TPM.tsv")
+view(unique_SPE_TPM)
+
+hist(unique_SPE_TPM$v5length, breaks = 10000, xlim = c(0,60000), main = "Histogram for SPE gene length from v5 conversions", 
+     xlab = "Gene Length", ylab = "# of genes in bin") 
+
+
+#5. Create distribution for SPE gene length from TPM files (Length column)
+hist(unique_SPE_TPM$Length, breaks = 10000, xlim = c(0,60000), main = "Histogram for SPE gene lengths from TPM data", 
+     xlab = "Gene Length", ylab = "# of genes in bin")
+
+#5a - plot standard dev? actually just the difference
+unique_SPE_TPM$Length_deviation <- unique_SPE_TPM$v5length - unique_SPE_TPM$Length #creates column with difference between v5 lengths and TPM
+unique_SPE_TPM$Length_deviation <- abs(unique_SPE_TPM$Length_deviation) #absolute value, all were - beofre indicating larger TPM size
+view(unique_SPE_TPM)
+hist(unique_SPE_TPM$Length_deviation, breaks = 10000, xlim = c(0,10000), main = "Histogram for absolute value of SPE gene lengths deviation between v5 and TPM - origionally most were - indicating TPM gene legnths are on average larger", 
+     xlab = "Difference (v5 - TPM)", ylab = "# of genes in bin")
+
+#6. Create distribution for nonSPE gene length from previous BED files (v5length)
+unique_nonSPE_TPM <- read_tsv("unique_nonSPE_TPM.tsv") 
+view(unique_nonSPE_TPM)
+
+hist(unique_nonSPE_TPM$v5length, breaks = 10000, xlim = c(0,60000), main = "Histogram for nonSPE gene length from v5 conversions", 
+     xlab = "Gene Length", ylab = "# of genes in bin") 
+
+#7. Create distribution for nonSPE gene length from TPM files (Length column)
+
+hist(unique_nonSPE_TPM$Length, breaks = 10000, xlim = c(0,60000), main = "Histogram for nonSPE gene lengths from TPM data", 
+     xlab = "Gene Length", ylab = "# of genes in bin")
+
+#7a - plot standard dev? actually just the difference
+unique_nonSPE_TPM$Length_deviation <- unique_nonSPE_TPM$v5length - unique_nonSPE_TPM$Length #creates column with difference between v5 lengths and TPM
+unique_nonSPE_TPM$Length_deviation <- abs(unique_nonSPE_TPM$Length_deviation) #absolute value, all were - beofre indicating larger TPM size
+view(unique_nonSPE_TPM)
+
+hist(unique_nonSPE_TPM$Length_deviation, breaks = 10000, xlim = c(0,10000), main = "Histogram for absolute value of nonSPE gene lengths deviation between v5 and TPM - origionally most were - indicating TPM gene legnths are on average larger", 
+     xlab = "Difference (v5 - TPM)", ylab = "# of genes in bin")
+
+#~~~~~~~~~~~~~~~~Making Files in BED format for Bins with Length and TPM data
+
+#1. SPE.TPM - LEFT JOINED BED FORMAT
+TPM_avgs <- read_tsv("TPM_avgs.tsv") %>% as.data.frame()
+TPM_avgs$Geneid <- substr(TPM_avgs$Geneid, start = 1, stop = 15) #remove T000etc from end of v5 gene ID
+view(TPM_avgs)
+TPM_avgs <- select(TPM_avgs, Geneid, total_avg) #selecting columns for id and avg tpm reads
+unique_SPE <- read_tsv("SPE.genes5.tsv")
+view(unique_SPE)
+colnames(unique_SPE)[4] <- ("Geneid") #change v5 gene ID column name for left join
+SPE.TPM <- left_join(unique_SPE, TPM_avgs, by = "Geneid")
+view(SPE.TPM)
+write_tsv(SPE.TPM, "SPE.TPM.tsv")
+
+#2. nonSPE.TPM - LEFT JOINED IN BED FORMAT
+TPM_avgs <- read_tsv("TPM_avgs.tsv") %>% as.data.frame()
+TPM_avgs$Geneid <- substr(TPM_avgs$Geneid, start = 1, stop = 15) #remove T000etc from end of v5 gene ID
+view(TPM_avgs)
+TPM_avgs <- select(TPM_avgs, Geneid, total_avg)
+unique_nonSPE <- read_tsv("NONSPE.genes5.tsv")
+view(unique_nonSPE)
+colnames(unique_nonSPE)[4] <- ("Geneid") #change v5 gene ID column name for left join
+nonSPE.TPM <- left_join(unique_nonSPE, TPM_avgs, by = "Geneid")
+colnames(nonSPE.TPM)
+write_tsv(nonSPE.TPM, "nonSPE.TPM.tsv")
+
+#Running sams script for bins
+#1. Step 1: Bin by 0.1
+
+
+SPE.TPM <- read_tsv("SPE.TPM.tsv")
+#view(SPE.TPM) #9,630
+nonSPE.TPM <- read_tsv("nonSPE.TPM.tsv")
+#str(nonSPE.TPM) #23,716
+
+#bin_by_L.10 <- function(df){
+# df<-df %>% mutate(Lbin = case_when(v5length <= 2500 ~ "L.0-2500", #V4 stands for the column name of variable 1, in this case v5length
+#                                    v5length > 2500 & v5length <= 5000 ~ "L.2500-5000",
+#                                   v5length > 5000 & v5length <= 10000 ~ "L.5000-10000",
+#                                v5length > 10000 ~ "L.10000-max"),
+#                     TPMbin = case_when(total_avg <= 0.5 ~ "TPM.0-5", #V5 stands for column name of variable 2, in this case TPM reads
+#                              total_avg > 0.5 & total_avg <= 2.5 ~ "TPM.5-2.5",
+#                             total_avg > 2.5 & total_avg <= 5 ~ "TPM.2.5-5",
+#                            total_avg > 5 & total_avg <= 15 ~ "TPM.5-15",
+#                           total_avg > 15 & total_avg <= 25 ~ "TPM.15-25",
+#                          total_avg > 25 ~ "TPM.25-max"))
+#return(df)
+#}
+
+bin_by_L.10 <- function(df){
+  df<-df %>% mutate(Lbin = case_when(v5length <= 900 ~ "L.0-900", #V4 stands for the column name of variable 1, in this case v5length
+                                     v5length > 900 & v5length <= 1500 ~ "L.900-1500",
+                                     v5length > 1500 & v5length <= 3000 ~ "L.1500-3000",
+                                     v5length > 3000 ~ "L.3000-max"),
+                    TPMbin = case_when(total_avg <= 0.5 ~ "TPM.0-5", #V5 stands for column name of variable 2, in this case TPM reads
+                                       total_avg > 0.5 & total_avg <= 2.5 ~ "TPM.5-2.5",
+                                       total_avg > 2.5 & total_avg <= 5 ~ "TPM.2.5-5",
+                                       total_avg > 5 & total_avg <= 15 ~ "TPM.5-15",
+                                       total_avg > 15 & total_avg <= 25 ~ "TPM.15-25",
+                                       total_avg > 25 ~ "TPM.25-max",
+                                       is.na(total_avg)==TRUE ~ "TPM.NA")) #adds bin for NA values by producing TF for values
+  return(df)
+}
+
+nonSPE.distrib.TPM <- tibble(V1=NA, V2=NA, V3=NA,V4=NA,V5=NA,V6=NA,V7=NA,Lbin=NA,TPMbin=NA) ### MAKE SURE TO CLEAR TIBBLE
+
+
+SPE.TPM <- bin_by_L.10(SPE.TPM) 
+nonSPE.TPM <- bin_by_L.10(nonSPE.TPM)
+view(SPE.TPM)
+view(nonSPE.TPM)
+
+SPE.distrib.TPM<-sample_n(SPE.TPM, 1000) #10%ish of the total SPE genes we are using
+
+SPE_L_splitlist <- split(SPE.distrib.TPM, SPE.distrib.TPM$Lbin) # 10% tibble split by length bin variable
+nonSPE_L_splitlist <- split(nonSPE.TPM, nonSPE.TPM$Lbin)
+
+for(L in names(SPE_L_splitlist)){ #goes through each L bin
+  s<-paste("^",L,"$",sep="") #gets name to exact match af bin
+  t<-grep(s,names(SPE_L_splitlist)) #finds exact match for AF in MOA dataframe list
+  b<-grep(s,names(nonSPE_L_splitlist))  #finds the exact match for AF in background dataframe list
+  for(TPM in c("TPM.0-5", "TPM.5-2.5","TPM.2.5-5", "TPM.5-15", "TPM.15-25", "TPM.25-max", "TPM.NA")){ #for each possible TPM bin
+    n<-filter(SPE_L_splitlist[[t]], TPMbin == TPM) %>% nrow() #number of MOA snps that need a matched background snp
+    pool<-filter(nonSPE_L_splitlist[[b]], TPMbin == TPM) #find all the background snps that match that AF and distance bin
+    if(nrow(pool) != 0 & n != 0){ #as long as there's 1 background SNP and MOA snp in that set of bins
+      nonSPE<-sample_n(pool, n, replace = FALSE) #sample the number of MOA snps in the bin from the background pool
+      nonSPE.distrib.TPM <- add_row(nonSPE.distrib.TPM, V1=nonSPE$v5chromosome,V2=nonSPE$v5start,V3=nonSPE$v5stop,V4=nonSPE$Geneid,V5=nonSPE$v5.., V6=nonSPE$v5length, V7=nonSPE$total_avg, Lbin=nonSPE$Lbin,TPMbin=nonSPE$TPMbin)  #write all that info to the background distribution table
+    }
+  }
+}
+View(nonSPE.distrib.TPM)#check for 1000 rows
+view(SPE.distrib.TPM) #check for 1000 rows
+
+nonSPE.distrib.TPM<-nonSPE.distrib.TPM[-1, ] #delete first row of NA values
+
+write.table(SPE.distrib.TPM, file=paste0("SPE.distrib1000.TPM.bed"), sep="\t", row.names=FALSE, quote=FALSE)
+write.table(nonSPE.distrib.TPM, file=paste0("nonSPE.distrib1000.TPM.bed"), sep="\t", row.names=FALSE, quote=FALSE)
+
+
+
+#n<-filter(SPE_L_splitlist[[t]], TPMbin == TPM) %>% nrow() #number of MOA snps that need a matched background snp
+view(n)
+
+#pool<-filter(nonSPE_L_splitlist[[b]], TPMbin == TPM) #find all the background snps that match that AF and distance bin
+view(pool)
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~VCAP Figures~~~~~~~~~~~~~~~~~~~~~~~~~~~
+H_perm0<-read_tsv("TPMbyL_allvall.h_estimates.txt") %>% as.data.frame()
+view(H_perm0)
+str(H_perm0)
+names(H_perm0)[13]<-"Trait"
+
+names(H_perm0)<- names(H_perm0) %>% str_replace_all(.,"_1","_SD")
+names(H_perm0)[1]<-"Component" 
+names(H_perm0)[2]<-"Her_K1" 
+names(H_perm0)[3]<-"Her_K2" 
+names(H_perm0)[4]<-"Her_K3" 
+names(H_perm0)[5]<-"Her_Top" 
+names(H_perm0)[6]<-"Her_ALL" 
+names(H_perm0)[7]<-"Component" 
+names(H_perm0)[8]<-"Her_K1SD" 
+names(H_perm0)[9]<-"Her_K2SD" 
+names(H_perm0)[10]<-"Her_K3SD" 
+names(H_perm0)[11]<-"Her_TopSD" 
+names(H_perm0)[12]<-"Her_ALLSD" 
+H_perm0<-H_perm0 %>% select(-contains("Component"))
+
+H_perm0<-mutate(H_perm0, 
+                Va_SPE = Her_K1 / Her_ALL,
+                Va_nonSPE = Her_K2 / Her_ALL,
+                Va_Rest = Her_K3 / Her_ALL)
+
+view(H_perm0)
+##Calculate Va and plot
+
+H_perm0 %>% select(c(contains("Va"),Trait)) %>% melt(id.vars="Trait", value.name="percent_Va", variable.name="K_Component") %>%
+  ggplot(aes(x=Trait)) +
+  geom_boxplot(aes(y=percent_Va, color=K_Component))+
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 7))+
+  xlab("Trait")+ylab("Va %")+
+  scale_color_brewer(palette = "Set2")
+
+melted_HpermALL<-H_perm0 %>% select(c(contains("Va"),Trait)) %>% melt(id.vars="Trait", value.name="percent_Va", variable.name="K_Component")
+view(melted_HpermALL)
+
+#Zeavolution mifugre
+
+melted_stats_Hperm0<-H_perm0 %>% select(c(contains("Va"),Trait)) %>% melt(id.vars="Trait", value.name="percent_Va", variable.name="K_Component") %>% group_by(Trait,K_Component) %>% summarize(Mean = mean(percent_Va), Median = median(percent_Va), std_dev=sd(percent_Va)) 
+view(melted_stats_Hperm0)
+
+H_perm0 %>%
+  ggplot(aes(x=reorder(Trait,Va_SPE)))+
+  geom_point(aes(y=Va_Rest, color="3_Rest"), alpha = 0.3, size = 1)+
+  geom_point(aes(y=Va_nonSPE, color="2_Background"), alpha = 0.3,size = 1)+
+  geom_point(aes(y=Va_SPE, color="1_MOA"), alpha = 0.3,size = 1)+
+  geom_point(data = melted_stats_Hperm0, aes(x=Trait, y=Mean, shape = K_Component)) + 
+  scale_shape_manual(values=c(16, 6, 4))+
+  theme(axis.text.y = element_text(size = 12), axis.text.x = element_blank())+ #, color = H_perm_ALL$trait_colors
+  xlab("")+ylab("Va %")+scale_color_brewer(palette = "Set2")+ggtitle(str_c("Estimated Va of All Traits with with 1 Permutation, ALLvALL"))+
+  theme(legend.title = element_blank())
+
+
+
+ggplot(H_perm0, aes(y=reorder(Trait,Va_SPE))) + 
+  stat_density_ridges(aes(x=Va_Rest,fill="3_Rest"),alpha=0.75,size=0,from=0,to=1,bandwidth = 0.01)+
+  stat_density_ridges(aes(x=Va_nonSPE,fill="2_nonSPE"),alpha=0.75,size=0,from=0,to=1,bandwidth = 0.01)+
+  stat_density_ridges(aes(x=Va_SPE,fill="1_SPE"),alpha=0.75,size=0,from=0,to=1,bandwidth = 0.01)+
+  ylab("Trait")+ xlab("Va %") +
+  scale_fill_brewer(palette = "Set2")+
+  geom_point(data = melted_stats_HpermALL, aes(y=Trait, x=Mean, shape = K_Component)) + 
+  scale_shape_manual(values=c(16, 6, 4))+
+  theme_minimal()+
+  theme(panel.grid.major.y = element_blank(), axis.text.y = element_blank())+
+  ggtitle(str_c("Estimated Va of All Traits with 1 Permutation, ALLvALL"))+
+  theme(legend.title = element_blank())
+
+brewer.pal(n = 8, name = "Set2")
+
+par(mfrow=c(1, 1))
+display.brewer.all()
+mycols4 <- c("#C3D938", "#772877", "#7C821E", "#D8B98B", "#7A4012")
+view(mycols4)
+
+##Group traits by category
+###Let's group phenotypes by "category"
+
+tassel_architecture<-c("tassel_length_BLUP;Brown_2011","spike_length_BLUP;Brown_2011","branch_zone_BLUP;Brown_2011","branch_number_transformed_BLUP;Brown_2011","tassprimbranchno_BLUP;Hung_2012_1","tasslength_BLUP;Hung_2012_1")
+ear_architecture<-c("cob_length_BLUP;Brown_2011","cob_diameter_BLUP;Brown_2011","ear_row_number_transformed_BLUP;Brown_2011","cobdiam_BLUP;Hung_2012_1","coblength_BLUP;Hung_2012_1","earrowno_BLUP;Hung_2012_1","kernelnoperrow_BLUP;Hung_2012_1","earmass_BLUP;Hung_2012_1","cobmass_BLUP;Hung_2012_1","totalkernelweight_BLUP;Hung_2012_1","weight20kernels_BLUP;Hung_2012_1","totalkernelno_BLUP;Hung_2012_1","starch_kernel_BLUP;Cook_2012","protein_kernel_BLUP;Cook_2012","oil_kernel_BLUP;Cook_2012")
+stalk_strength<-c("WI_rind_penetrometer_resistance_BLUE;Peiffer_2013","WI_rind_penetrometer_resistance_BLUP;Peiffer_2013","ALL_rind_penetrometer_resistance_BLUE;Peiffer_2013","ALL_rind_penetrometer_resistance_BLUP;Peiffer_2013","MO_rind_penetrometer_resistance_BLUE;Peiffer_2013","MO_rind_penetrometer_resistance_BLUP;Peiffer_2013","NY_rind_penetrometer_resistance_BLUE;Peiffer_2013","NY_rind_penetrometer_resistance_BLUP;Peiffer_2013")
+disease<-c("southern_leaf_blight_BLUP;Bian_2014_Kump_2011","lesion_severity_BLUP;Olukolu_2014","sqrt_diseased_leaf_area1_BLUP;Poland_2011","sqrt_diseased_leaf_area2_BLUP;Poland_2011","sqrt_diseased_leaf_area3_BLUP;Poland_2011","diseased_leaf_area1_BLUP;Poland_2011","diseased_leaf_area2_BLUP;Poland_2011","diseased_leaf_area3_BLUP;Poland_2011","northern_leaf_blight_index_BLUP;Poland_2011")
+plant_architecture<-c("height_ratio_BLUP;Olukolu_2014","stalk_width_ratio_BLUP;Olukolu_2014","leaf_length_BLUP;Tian_2011","leaf_width_BLUP;Tian_2011","upper_leaf_angle_BLUP;Tian_2011","last_leaf_with_epicuticular_wax;Foerster_2015","ALL_ear_height_BLUE;Peiffer_2013","ALL_ear_height_BLUP;Peiffer_2013","plantheight_BLUP;Hung_2012_1","earheight_BLUP;Hung_2012_1","leaflength_BLUP;Hung_2012_1","leafwidth_BLUP;Hung_2012_1","upperleafangle_BLUP;Hung_2012_1","nodenumberbelowear_BLUP;Hung_2012_1","nodenumberaboveear_BLUP;Hung_2012_1","numbraceroots_BLUP;Hung_2012_1","plant_height_BLUP;Peiffer_2014","ear_height_BLUP;Peiffer_2014","plant_height_minus_ear_height_BLUP;Peiffer_2014","ear_height_div_plant_height_BLUP;Peiffer_2014","plant_height_div_DTA_BLUP;Peiffer_2014","leaf_angle_boxcox_transformed_BLUP;Tian_2011")
+flowering_time<-c("DTA_ratio_BLUP;Olukolu_2014","ALL_DTA_BLUE;Peiffer_2013","ALL_DTA_BLUP;Peiffer_2013","DTS_BLUP;Hung_2012_1","DTA_BLUP;Hung_2012_1","asi_BLUP;Hung_2012_1","DTA_BLUP;Buckler_2009","DTS_BLUP;Buckler_2009","DTA_BLUP;Wallace_2014","ASI_BLUP;Buckler_2009","GDD_DTS_BLUP;Peiffer_2014","GDD_DTA_BLUP;Peiffer_2014","GDD_ASI_BLUP;Peiffer_2014","DTS_BLUP;Peiffer_2014","DTA_BLUP;Peiffer_2014","ASI_BLUP;Peiffer_2014","GDD_DTA_long_BLUP;Hung_2012","GDD_DTA_short_BLUP;Hung_2012","GDD_DTA_photo_resp_BLUP;Hung_2012","GDD_DTS_long_BLUP;Hung_2012","GDD_DTS_short_BLUP;Hung_2012","GDD_DTS_photo_resp_BLUP;Hung_2012","GDD_DTA_NC06_BLUP;Hung_2012","GDD_DTS_NC06_BLUP;Hung_2012","GDD_DTA_MO06_BLUP;Hung_2012","GDD_DTS_MO06_BLUP;Hung_2012","GDD_DTA_NY06_BLUP;Hung_2012","GDD_DTS_NY06_BLUP;Hung_2012","GDD_DTA_IL06_BLUP;Hung_2012","GDD_DTS_IL06_BLUP;Hung_2012","GDD_DTA_FL06_BLUP;Hung_2012","GDD_DTS_FL06_BLUP;Hung_2012","GDD_DTA_PR06_BLUP;Hung_2012","GDD_DTS_PR06_BLUP;Hung_2012","GDD_DTA_NC07_BLUP;Hung_2012","GDD_DTS_NC07_BLUP;Hung_2012","GDD_DTA_MO07_BLUP;Hung_2012","GDD_DTS_MO07_BLUP;Hung_2012","GDD_DTA_NY07_BLUP;Hung_2012","GDD_DTS_NY07_BLUP;Hung_2012","GDD_DTA_IL07_BLUP;Hung_2012","GDD_DTS_IL07_BLUP;Hung_2012","GDD_DTA_FL07_BLUP;Hung_2012","GDD_DTS_FL07_BLUP;Hung_2012")
+misc<-c("glsblup;Benson_2015","flecking_ls_mean;Olukolu_2016","flecking_poisson_transformation_BLUP;Olukolu_2016")
+vitamin_E<-c("alphaT_transformed_BLUE;Diepenbrock_2017","deltaT_transformed_BLUE;Diepenbrock_2017","gammaT_transformed_BLUE;Diepenbrock_2017","TotalT_transformed_BLUE;Diepenbrock_2017","alphaT3_transformed_BLUE;Diepenbrock_2017","deltaT3_transformed_BLUE;Diepenbrock_2017","gammaT3_transformed_BLUE;Diepenbrock_2017","TotalT3_transformed_BLUE;Diepenbrock_2017","TotalT_plus_T3_transformed_BLUE;Diepenbrock_2017","plastochromanol8_transformed_BLUE;Diepenbrock_2017","alphaT_div_gammaT_transformed_BLUE;Diepenbrock_2017","alphaT3_div_gammaT3_transformed_BLUE;Diepenbrock_2017","gammaT_div_gammaTPlusalphaT_transformed_BLUE;Diepenbrock_2017","gammaT3_div_gammaT3PlusalphaT3_transformed_BLUE;Diepenbrock_2017","deltaT_div_gammaTPlusalphaT_transformed_BLUE;Diepenbrock_2017","deltaT_div_alphaT_transformed_BLUE;Diepenbrock_2017","deltaT_div_gammaT_transformed_BLUE;Diepenbrock_2017","deltaT3_div_gammaT3PlusalphaT3_transformed_BLUE;Diepenbrock_2017","deltaT3_div_alphaT3_transformed_BLUE;Diepenbrock_2017","deltaT3_div_gammaT3_transformed_BLUE;Diepenbrock_2017","TotalT_div_totalT3_transformed_BLUE;Diepenbrock_2017")
+metabolites<-c("chlorophylla_BLUP;Wallace_2014","chlorophyllb_BLUP;Wallace_2014","malate_BLUP;Wallace_2014","fumarate_BLUP;Wallace_2014","fumarate2_BLUP;Wallace_2014","glutamate_BLUP;Wallace_2014","aminoacids_BLUP;Wallace_2014","protein_BLUP;Wallace_2014","nitrate_BLUP;Wallace_2014","starch_BLUP;Wallace_2014","sucrose_BLUP;Wallace_2014","glucose_BLUP;Wallace_2014","fructose_BLUP;Wallace_2014","principal_component_metabolies1;Wallace_2014","principal_component_metabolies2;Wallace_2014")
+
+melted_Hperm0<-H_perm0 %>% select(c(contains("Va"),Trait)) %>% melt(id.vars="Trait", value.name="percent_Va", variable.name="K_Component")
+
+melted_Hperm00<-mutate(melted_Hperm0, Trait_Category = case_when(Trait %in% tassel_architecture ~ "tassel_architecture",
+                                                                 Trait %in% ear_architecture ~ "ear_architecture",
+                                                                 Trait %in% disease ~ "disease",
+                                                                 Trait %in% stalk_strength ~ "stalk_strength",
+                                                                 Trait %in% plant_architecture ~ "plant_architecture",
+                                                                 Trait %in% flowering_time ~ "flowering_time",
+                                                                 Trait %in% misc ~ "misc",
+                                                                 Trait %in% vitamin_E ~ "vitamin_E",
+                                                                 Trait %in% metabolites ~ "metabolites")) %>% as.data.frame()
+
+str(melted_Hperm00)
+
+vaSPE <- melted_Hperm00[str_detect(melted_Hperm00$K_Component, "Va_SPE"), ]
+view(vaSPE)
+data1 <- iris[str_detect(iris$Species, "virg"), ]  # Extract matching rows with str_detect
+
+
+view(melted_Hperm00)
+for(i in c("ear_architecture","disease","penetrometer","plant_architecture","flowering_time","misc","vitamin_E","metabolites")){
+  assign(str_c("bxplt_",i), melted_Hperm00 %>% filter(Trait_Category == i) %>% ggplot(aes(x=Trait)) +geom_boxplot(aes(y=percent_Va, color=K_Component))+coord_flip()+theme(axis.text.y = element_text(size = 6))+xlab("")+ylab("Va %")+scale_color_brewer(palette = "Set1")+ggtitle(str_c("Traits of ",i)))
+}
+
+for(i in ls(pattern = "bxplt")){ggsave(file=str_c(.,i,".pdf"), plot = get(i), device = "pdf")}
+
+
+view(melted_Hperm00)
+
+
+
+#loop for everything?
+#load in files
+H_perm1<-read_tsv("TPMbyL_1000_perm_1.h_estimates.txt")
+H_perm2<-read_tsv("TPMbyL_1000_perm_2.h_estimates.txt")
+H_perm3<-read_tsv("TPMbyL_1000_perm_3.h_estimates.txt")
+H_perm4<-read_tsv("TPMbyL_1000_perm_4.h_estimates.txt")
+H_perm5<-read_tsv("TPMbyL_1000_perm_5.h_estimates.txt")
+H_perm6<-read_tsv("TPMbyL_1000_perm_6.h_estimates.txt")
+H_perm7<-read_tsv("TPMbyL_1000_perm_7.h_estimates.txt")
+H_perm8<-read_tsv("TPMbyL_1000_perm_8.h_estimates.txt")
+H_perm9<-read_tsv("TPMbyL_1000_perm_9.h_estimates.txt")
+H_perm10<-read_tsv("TPMbyL_1000_perm_10.h_estimates.txt")
+
+#loop to format
+format_Hperm<-function(df){
+  names(df)[13]<-"Trait"
+  names(df)<- names(df) %>% str_replace_all(.,"_1","_SD")
+  names(df)[1]<-"Component" 
+  names(df)[2]<-"Her_K1" 
+  names(df)[3]<-"Her_K2" 
+  names(df)[4]<-"Her_K3" 
+  names(df)[5]<-"Her_Top" 
+  names(df)[6]<-"Her_ALL" 
+  names(df)[7]<-"Component" 
+  names(df)[8]<-"Her_K1SD" 
+  names(df)[9]<-"Her_K2SD" 
+  names(df)[10]<-"Her_K3SD" 
+  names(df)[11]<-"Her_TopSD" 
+  names(df)[12]<-"Her_ALLSD" 
+  df<-df %>% select(-contains("Component"))
+  return(df)
+}
+
+H_perm1<-format_Hperm(H_perm1)
+H_perm2<-format_Hperm(H_perm2)
+H_perm3<-format_Hperm(H_perm3)
+H_perm4<-format_Hperm(H_perm4)
+H_perm5<-format_Hperm(H_perm5)
+H_perm6<-format_Hperm(H_perm6)
+H_perm7<-format_Hperm(H_perm7)
+H_perm8<-format_Hperm(H_perm8)
+H_perm9<-format_Hperm(H_perm9)
+H_perm10<-format_Hperm(H_perm10)
+
+#combining into master dataframe
+df_names<-ls(pattern = "^H_perm")
+H_permALL<-H_perm1
+for(i in 2:length(df_names)){
+  H_permALL<-bind_rows(H_permALL, get(df_names[i]))
+}
+view(H_permALL)
+
+#calculations
+H_permALL<-mutate(H_permALL, 
+                  Va_SPE = Her_K1 / Her_ALL,
+                  Va_nonSPE = Her_K2 / Her_ALL,
+                  Va_Rest = Her_K3 / Her_ALL)
+
+H_permALL %>% select(c(contains("Va"),Trait)) %>% melt(id.vars="Trait", value.name="percent_Va", variable.name="K_Component") %>%
+  ggplot(aes(x=Trait)) +
+  geom_boxplot(aes(y=percent_Va, color=K_Component))+
+  coord_flip()+
+  theme(axis.text.y = element_text(size = 7))+
+  xlab("Trait")+ylab("Va %")+
+  scale_color_brewer(palette = "Set2")
+
+view(H_permALL)
+
+melted_HpermALL<-H_permALL %>% select(c(contains("Va"),Trait)) %>% melt(id.vars="Trait", value.name="percent_Va", variable.name="K_Component")
+view(melted_HpermALL)
+
+melted_stats_HpermALL<-H_permALL%>% 
+  select(c(contains("Va"),Trait)) %>% 
+  melt(id.vars="Trait", value.name="percent_Va", variable.name="K_Component") %>% 
+  group_by(Trait,K_Component)%>% 
+  summarize(Mean = mean(percent_Va), Median = median(percent_Va), std_dev=sd(percent_Va)) 
+
+view(melted_stats_HpermALL)
+
+vaSPEs <- melted_stats_HpermALL[str_detect(melted_stats_HpermALL$K_Component, "Va_SPE"), ]
+view(vaSPEs)
+
+melted_stats_HpermALL<-mutate(melted_stats_HpermALL, Trait_Category = case_when(Trait %in% tassel_architecture ~ "tassel_architecture",
+                                                                                Trait %in% ear_architecture ~ "ear_architecture",
+                                                                                Trait %in% disease ~ "disease",
+                                                                                Trait %in% stalk_strength ~ "stalk_strength",
+                                                                                Trait %in% plant_architecture ~ "plant_architecture",
+                                                                                Trait %in% flowering_time ~ "flowering_time",
+                                                                                Trait %in% misc ~ "misc",
+                                                                                Trait %in% vitamin_E ~ "vitamin_E",
+                                                                                Trait %in% metabolites ~ "metabolites")) %>% as.data.frame()
+view(melted_HpermALL)
+
+
+
+
+
+
+H_permALL %>%
+  ggplot(aes(x=reorder(Trait,Va_SPE)))+
+  geom_point(aes(y=Va_Rest, color="3_Rest"), alpha = 0.3, size = 1)+
+  geom_point(aes(y=Va_nonSPE, color="2_Background"), alpha = 0.3,size = 1)+
+  geom_point(aes(y=Va_SPE, color="1_SPE"), alpha = 0.3,size = 1)+
+  geom_point(data = melted_stats_HpermALL, aes(x=Trait, y=Mean, shape = K_Component)) + 
+  geom_point(data = melted_stats_Hperm0, aes(x=Trait, y=Mean, shape = K_Component)) + 
+  scale_shape_manual(values=c(16, 6, 4))+
+  theme(axis.text.y = element_text(size = 12), axis.text.x = element_blank())+ #, color = H_perm_ALL$trait_colors
+  xlab("")+ylab("Va %")+scale_color_brewer(palette = "Set2")+ggtitle(str_c("Estimated Va of All Traits with with 10 Permutations, 1000 SPE Genes"))+
+  theme(legend.title = element_blank())
+
+ggplot(H_permALL, aes(y=reorder(Trait,Va_SPE))) + 
+  stat_density_ridges(aes(x=Va_Rest,fill="3_Rest"),alpha=0.75,size=0,from=0,to=1,bandwidth = 0.01)+
+  stat_density_ridges(aes(x=Va_nonSPE,fill="2_nonSPE"),alpha=0.75,size=0,from=0,to=1,bandwidth = 0.01)+
+  stat_density_ridges(aes(x=Va_SPE,fill="1_SPE"),alpha=0.75,size=0,from=0,to=1,bandwidth = 0.01)+
+  ylab("Trait")+ xlab("Va %") +
+  scale_fill_brewer(palette = "Set2")+
+  geom_point(data = melted_stats_HpermALL, aes(y=Trait, x=Mean, shape = K_Component)) + 
+  scale_shape_manual(values=c(16, 6, 4))+
+  theme_minimal()+
+  theme(panel.grid.major.y = element_blank(), axis.text.y = element_blank())+
+  ggtitle(str_c("Estimated Va of All Traits with 10 Permutations, 1000 SPE Genes"))+
+  theme(legend.title = element_blank())
+
+
+
+
+ggplot(H_permALL, aes(y=reorder(Trait,Va_SPE))) + 
+  stat_density_ridges(aes(x=Va_Rest,fill="3_Rest"),alpha=0.75,size=0,from=0,to=1,bandwidth = 0.03)+
+  stat_density_ridges(aes(x=Va_nonSPE,fill="2_nonSPE"),alpha=0.75,size=0,from=0,to=1,bandwidth = 0.03)+
+  stat_density_ridges(aes(x=Va_SPE,fill="1_SPE"),alpha=0.75,size=0,from=0,to=1,bandwidth = 0.03)+
+  ylab("Trait")+ xlab("Va %") +
+  scale_fill_brewer(palette = "Set2")+
+  geom_point(data = melted_stats_Hperm0, aes(y=Trait, x=Mean, shape = K_Component)) + 
+  scale_shape_manual(values=c(16, 6, 4))+
+  theme_minimal()+
+  theme(panel.grid.major.y = element_blank(), axis.text.y = element_blank())+
+  ggtitle(str_c("Estimated Va of All Traits with 10 Permutations, 1000 SPE Genes"))+
+  theme(legend.title = element_blank())
+
 
 
 
