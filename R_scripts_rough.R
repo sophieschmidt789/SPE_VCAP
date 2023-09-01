@@ -1,9 +1,6 @@
-install.packages("gitcreds")
 library(tidyr)
-#install.packages("tidyverse")
 library(tidyverse)
 library(readxl)
-#install.packages("arsenal")
 library(arsenal)
 library(dplyr)
 library(tidyverse)
@@ -12,133 +9,20 @@ library(reshape)
 library(reshape2)
 library(openxlsx)
 library(readr)
-#install.packages("readr")
-#install.packages("openxlsx")
-#install.packages("reshape")
-#install.packages("reshape2")
-
-#May need to set working directory to Lab Work/R Stuff
-
-
-
-# Merging sheets for ear, flag leaf, and tassel from supplemental dataset s1 -----------------------------
-# excel_sheets(path)
-#sheet = excel_sheets("Supplemental_dataset_S1.xlsx")
-#data_frame = lapply(setNames(sheet, sheet), 
-#function(x) read_excel("Supplemental_dataset_S1.xlsx", sheet=x))                    
-#data_frame = bind_rows(data_frame, .id="Sheet")                     
-#print (data_frame)
-#view(data_frame)
-#Results in 18718 rows signifying that everything is now in one sheet (appx 6000 rows from each page)
-#head(data_frame)
-#str(data_frame)
-
-
-# (all genes in 3 tissues from Supplemental_dataset_S1 Unique genes among ear, flagleaf, and tassel in ("Supplemental_dataset_S1.xlsx") ----------------------------
-
-#unique(data_frame[c("geneID")])
-#Results in 10,965 total rows
-
-# (genes expressed in all 3 tissues set 1)Same genes among ear, flagleaf, and tassel in ("Supplemental_dataset_S1.xlsx")  ---------------------------
-
-#data_framegeneID <- select(data_frame,c(geneID, Sheet))
-#head(data_framegeneID)
-#str(data_framegeneID)
-#duplicated(data_framegeneID)
-#which(duplicated(data_framegeneID)) #I'm struggling to pull a list of names - I'm just able to pull the rows that have duplicate values, Sam, you have a better idea of how to pull a list of genes that are present in all 3 tissues?
-#duplicates <- filter(data_framegeneID,duplicated(geneID)) #duplicated at least 2x, create 3 lists
-#dup_tassel <- filter(data_framegeneID,duplicated(geneID)) %>% filter(Sheet=="tassel") %>% pull(geneID)
-#str(dup_tassel)
-#head(dup_tassel)#run for flagleaf
-
-#filter(data_framegeneID,duplicated(geneID)) %>% str()
-#run filter for flagleaf and tassel, use those 2 sets, go to og frame, where sheets = ear, && gene ID must be in vector for flagleaf and tasse)
-#filter(data_framegeneID,Sheet=="ear"&geneID %in%dup_tassel) #run again with flagleaf
-#filter(data_framegeneID,Sheet=="flagleaf"&geneID %in%dup_tassel)
-
-
-
-
-
-
-# (all genes expressed among sets 1 and 2) Comparing data_frame2 to data_frame for unique gene titles (("Supplemental8_SPE_PAV_gene_list (COPY).xlsx") and ("Supplemental_dataset_S1.xlsx")) --------------
-
-#data_frame2 <- read_xlsx("Supplemental8_SPE_PAV_gene_list (COPY).xlsx")
-#head(data_frame2)
-#str(data_frame2)
-#data_framegeneID <- pull(data_frame,geneID)
-#head(data_framegeneID)
-#data_framegeneID2 <- pull(data_frame2,geneID)
-#str(data_framegeneID2)
-
-#data_frame3 <- c(data_framegeneID, data_framegeneID2)
-#head(data_frame3)
-#str(data_frame3)
-#unique(data_frame3) #soooo, how to I pull the whole list? This is all the unique genes between all the tissues in both of the V4 spreadsheets
-#innerjoin to join sets - 
-
-# (same genes among sets 1 and 2) Comparing data_frame2 to data_frame for gene titles that are the same "Supplemental8_SPE_PAV_gene_list (COPY).xlsx") and ("Supplemental_dataset_S1.xlsx")) ---------
-
-#same_1and2 <- generics::intersect(data_framegeneID, data_framegeneID2)
-#str(same_1and2) #did this work????
-
-#Options to chunk the data of SPE genes: 
-#accumulation of all genes present in all datasets (looking for unique)
-#genes present in every tissue across all datasets 
-#genes present in all datasets (doesn't need to be any every tissue/cross)
-#for crosses, turn into binary, use mutate and sum coll.
-#turn into binary, stringr - package in tidyr
-#to combine B and X, mutate
-
-# I want to build a master spreadsheet combining supp 1 and supp 8 by organizing by geneID, sheet/tissue, crosses in binary (1 for )
-# Step one, mutate x and NA in crosses in Supp 1 data_frame to binary x = 1 NA = 0
-#head(data_frame)
-#data_frame %>% 
-#mutate(across(c(SPE_B_A554_E, SPE_X_A554_E, SPE_B_H84_E, SPE_X_H84_E, SPE_B_H99_E, SPE_X_H99_E, SPE_B_Mo17_E, SPE_X_Mo17_E, SPE_B_Oh43_E, SPE_X_Oh43_E, SPE_B_W64A_E, SPE_X_W64A_E),
-#    ~factor(ifelse(.x == "x",1,0)))) 
-#head(data_frame)#wooo this works, all x = 1 and NA = 0)
-# Step two, rearrange supplementa8 into tissuT|geneID|female/cross||||
-#data_frame2 <- read_xlsx("Supplemental8_SPE_PAV_gene_list (COPY).xlsx")
-#head(data_frame2)
-#mergedata_frame2 <- data_frame2 %>% 
-#  group_by(geneID, Tissue)
-#head(mergedata_frame2)
-#str(mergedata_frame2)
-#str(data_frame2)
-
-#reshape(data_frame2,idvar = "geneID", timevar ="Female", direction ="wide")
-#head(data_frame2)
-
-#V3 to V4 conversions for dataset 3 - Did I do this remotely right?
-#V3V4_conversions <- read_xlsx("V3 V4 conversions.xlsx")
-#head(V3V4_conversions)
-#str(V3V4_conversions)
-#v3dataframe <- read_xlsx("1-s2.0-S0960982217316603-mmc3 (COPY).xlsx")
-#head(v3dataframe) #lowercasev
-#filter(V3V4_conversions, v3geneID %in% v3dataframe$"v3geneID")
-#converted_data3 <- inner_join(x=v3dataframe,y=(V3V4_conversions),by="v3geneID")
-#str(converted_data3)
-#head(converted_data3)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~For REAL ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-###################May need to set working directory to Lab Work/R Stuff###############
-#Building a Master Data set for VCAP Analysis
-#To Do to make data sets compatible for combinatio:
+
 
 #Data Set 1: Supplemental_dataset_s1.xlsx
 #1. Use merged dataset of three sheets for ear, flagleaf, and tassel
-#sheet <- readxl::excel_sheets("Supplemental_dataset_S1.xlsx")
 sheet = excel_sheets("Supplemental_dataset_S1.xlsx")
-#view(sheet)
 data_set_1 = lapply(setNames(sheet, sheet), 
                     function(x) read_excel("Supplemental_dataset_S1.xlsx", sheet=x))                    
-data_set_1 = bind_rows(data_set_1, .id="Sheet")
-
-#view(data_set_1) #this shows that all 3 sheets have been added together, resulting in 18,718 rows with 'Sheet' column containing tissue label
+data_set_1 = bind_rows(data_set_1, .id="Sheet") #all 3 sheets have been added together, resulting in 18,718 rows with 'Sheet' column containing tissue label
 
 data_set_1 <- data_set_1 %>% 
-  mutate(tissue = Sheet) # this makes a column titled tissue containing the tisue ID (origionally clalled sheet but wouldn't let me change column name)
-#view(data_set_1)
+  mutate(tissue = Sheet) # this makes a column titled tissue containing the tisue ID (originally called sheet but wouldn't let me change column name)
+
 
 #2. Convert NA/x absence/presence system to a 1/0 binary where x = 1 and NA = 0
 data_set_101 <- mutate(data_set_1,across(c(9:20),
@@ -162,7 +46,7 @@ data_set_101$SPE_X_Oh43_<-as.numeric(data_set_101$SPE_X_Oh43_)
 data_set_101$SPE_B_W64A_<-as.numeric(data_set_101$SPE_B_W64A_)
 data_set_101$SPE_X_W64A_<-as.numeric(data_set_101$SPE_X_W64A_)
 
-#view(data_set_101) #see that all data is now in 1/2
+view(data_set_101) #see that all data is now in 1/2
 
 data_set_101$B73xA554<-rowSums(data_set_101[9:10])#adds columns together into new column, however, 2 represents 0 and 3 represents 1  
 data_set_101$B73xH84<-rowSums(data_set_101[11:12])#same for H84 cross, makes one column
@@ -183,15 +67,10 @@ data_set_101 <-
 
 names(data_set_101)[65] <- "dataset" #this is renaming Data Set column to dataset for ease of access 
 
-#view(data_set_101) #yay, have all triples labeled as standard cross with 0/1 binary
-
-
-#Data Set 2: Supplemental8_SPE_PAV_gene_list (COPY).xlsx
-#This one is a little wonky as it is a vertical list - look up how to go vertical to horizontal
+#Data Set 2: Supplemental8_SPE_PAV_gene_list (COPY).xlsx ~~~~ This one is a little wonky as it is a vertical list - look up how to go vertical to horizontal
 data_set_2 <- read_xlsx("Supplemental8_SPE_PAV_gene_list (COPY).xlsx")
-#view(data_set_2)
 data_set_2<-mutate(data_set_2,cross=str_c(Female,Male, sep = "x")) #creates new column titled 'cross' that contains Female and Male cross united by x from columns 'Male' and 'Female'
-#view(data_set_2) #confirms that new column shows up
+view(data_set_2) #confirms that new column shows up
 unique(data_set_2$cross) #shows a total of 89 unique crosses #need to make melted data set first???????????
 data_set_2_test<-as.tibble(data_set_2)
 data_set_2_mod <- data_set_2_test %>% select(geneID, cross, tissue) #simplifying data set to just have geneID, cross, and Tissue columns
@@ -205,24 +84,17 @@ data_set_2_cast <- replace(data_set_2_cast, is.na(data_set_2_cast), 1) #replaces
 data_set_2_cast <- data_set_2_cast %>% add_column(dataset = 2) #this adds column for dataset identifier
 colnames(data_set_2_cast)
 data_set_2_cast <- as.data.frame(data_set_2_cast)
-#view(data_set_2_cast)
-#str(data_set_2_cast)#yay! shows 1 for presence 0 for absence 
+str(data_set_2_cast)#yay! shows 1 for presence 0 for absence 
 
 #Data Set 3 (edited): data_set_3
 #In V3 right now, convert to V4
 V3V4_conversions <- read_xlsx("V3 V4 conversions.xlsx") #create dataframe for v3v4 conversions
-#head(V3V4_conversions)
-str(V3V4_conversions)
 v3data_set_3 <- read_xlsx("data_set_3.xlsx") #create dataframe for data set 3 that's currently v3
-#head(v3data_set_3)
-#str(v3data_set_3)
 filter(V3V4_conversions, v3geneID %in% v3data_set_3$"v3geneID") #results in tibble with 38 747 rows, this is finding matches from v3geneid in master spreadsheet to genes in the gene_ID colum in data set 3
 v4data_set_3 <- v3data_set_3 %>% inner_join(V3V4_conversions,by="v3geneID") #this is building a data frame with a matched column for the v4geneID to the v3geneID from the key
 colnames(v4data_set_3) #shows that there is a v4geneID column after everything else, also this old script that also worked??? Not sure, ask Sam v4data_set_3 <- %>% inner_join(x=v3data_set_3,y=(V3V4_conversions),by="v3geneID")
 
 #To lump B and X SPE specifier in all three root samples, will need to add all 6 columns together to form one column for each cross
-#head(v4data_set_3)
-#str(v4data_set_3)
 v4data_set_3$B73xA554a<-rowSums(v4data_set_3[,2:7]) #this is adding a new column B73xA554 that has the row sum of columns 2 through 7. 
 v4data_set_3$B73xH84a<-rowSums(v4data_set_3[,8:13]) #add new column for B73xH84 sum
 v4data_set_3$B73xH99a<-rowSums(v4data_set_3[,14:19]) #add new column for B73xH99 sum
@@ -230,10 +102,9 @@ v4data_set_3$B73xMo17a<-rowSums(v4data_set_3[,20:25]) #add new column for B73xMo
 v4data_set_3$B73xOh43a<-rowSums(v4data_set_3[,26:31]) #add new column for B73xOh43 sum
 v4data_set_3$B73xW64Aa<-rowSums(v4data_set_3[,32:37]) #add new column for B73xW64A sum
 v4data_set_3 #view to confirm that the column showed up
-#view(v4data_set_3) #yay!
+view(v4data_set_3) #yay!
 
-#Turn the added columns for each cross into a TRUE FALSE binary system to indicate presence or absence
-#head(v4data_set_3)
+#Turn the added columns for each cross into a TRUE FALSE binary system to indicate presence or absence:
 colnames(v4data_set_3)
 v4data_set_3$B73xA554 <- as.numeric(v4data_set_3$B73xA554a > 0) #This adds a new column for B73xA554 and changes all values greater than 0 to '1', making a binary system compared to a valued system. Can turn to T/F or Y/N at a later time. 
 v4data_set_3$B73xH84 <- as.numeric(v4data_set_3$B73xH84a > 0) #0/1 binary for B73xH84
@@ -257,7 +128,7 @@ colnames(v4data_set_3)[42]<-"match_ratio" #re-naming Match Ratio column for ease
 v4data_set_3<-filter(v4data_set_3, match_ratio !="1-to-0")
 #view(v4data_set_3)
 
-#Now to merge all three data sets into one data set
+#~~~~~Now to merge all three data sets into one data set~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #1. Stack data_set_101 and v4data_set_3 so that columns allign by geneID, tissue, and all 6 crosses. 
 colnames(v4data_set_3)[39]<-"geneID" #this changed the  v4geneID column to just geneID so it can stack with data frame 1 below
@@ -281,12 +152,13 @@ merged_data_set_simple <- select(merged_data_set, c(geneID, tissue, B73xW64A, B7
                                                     PHG72xB73, PHG72xMo17, PHG72xPH207, PHJ40xB73, PHJ40xMo17, PHJ40xPH207, PHN11xB73, PHN11xMo17, PHN11xPH207, PHW65xB73, PHW65xMo17, PHW65xPH207, W64AxB73, W64AxMo17, W64AxPH207))
 view(merged_data_set_simple)
 str(merged_data_set_simple)
+#write.xlsx(merged_data_set_simple, "merged_data_set.xlsx")
+
 
 #4. Set up commands for loop #to figure out commands for loop, then add under forloop, change 1 to id variable. Then create new object to save results from temp
 results_dataframetrial <- tibble(geneID = NA, number_SPE_crosses = NA) #this creates an empty dataframe to pipe the outcomes into
 unique_gene_list <- unique(merged_data_set$geneID) #pulls unique gene list from merged dataset to use for loop
-#view(unique_gene_list)
-#str(unique_gene_list) #pulls 36587 unique genes
+str(unique_gene_list) #pulls 36587 unique genes
 temp <- filter(merged_data_set_simple, geneID==unique_gene_list[4]) #creates df 'temp' that will be overwritten by making a separate tbbl with each unique geneID from the list.
 tempsums <- select(temp,-c(geneID, tissue)) %>% #the select function selects all the numerical columns (crosses) from the temp tbbl so there are no strings
   colSums(., na.rm = TRUE) %>% as.data.frame() #this sums down each cross column and saves as a dataframe and creates a tible with cross in one column and sum in the other
@@ -307,7 +179,7 @@ for (id in 1:5) {
   tempsums$x <- ifelse(tempsums$x>0,1,0)
   results_dataframe <- add_row(results_dataframe, geneID = unique_gene_list[id], number_SPE_crosses=colSums(tempsums))
 }
-view(results_dataframe)
+view(results_dataframe) #should work
 
 #6. Run the loop on the whole unique geneID
 unique_gene_list <- unique(merged_data_set$geneID) #pulls list of unique genes from the master data set
@@ -577,6 +449,37 @@ print(bedNONSPE)
 view(bedNONSPE)#looks good
 write.table(bedNONSPE, "NONSPE.genes.bed")
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #v3data_set_3 <- read_xlsx("data_set_3.xlsx") 
 #filter(V3V4_conversions, v3geneID %in% v3data_set_3$"v3geneID") #results in tibble with 38 747 rows, this is finding matches from v3geneid in master spreadsheet to genes in the gene_ID colum in data set 3
 #v4data_set_3 <- v3data_set_3 %>% inner_join(V3V4_conversions,by="v3geneID")
@@ -692,6 +595,107 @@ write.table(bedNONSPE, "NONSPE.genes.bed")
 #output <- add_row(geneID = )
 
 
+
+
+
+# Merging sheets for ear, flag leaf, and tassel from supplemental dataset s1 -----------------------------
+# excel_sheets(path)
+#sheet = excel_sheets("Supplemental_dataset_S1.xlsx")
+#data_frame = lapply(setNames(sheet, sheet), 
+#function(x) read_excel("Supplemental_dataset_S1.xlsx", sheet=x))                    
+#data_frame = bind_rows(data_frame, .id="Sheet")                     
+#print (data_frame)
+#view(data_frame)
+#Results in 18718 rows signifying that everything is now in one sheet (appx 6000 rows from each page)
+#head(data_frame)
+#str(data_frame)
+
+
+# (all genes in 3 tissues from Supplemental_dataset_S1 Unique genes among ear, flagleaf, and tassel in ("Supplemental_dataset_S1.xlsx") ----------------------------
+
+#unique(data_frame[c("geneID")])
+#Results in 10,965 total rows
+
+# (genes expressed in all 3 tissues set 1)Same genes among ear, flagleaf, and tassel in ("Supplemental_dataset_S1.xlsx")  ---------------------------
+
+#data_framegeneID <- select(data_frame,c(geneID, Sheet))
+#head(data_framegeneID)
+#str(data_framegeneID)
+#duplicated(data_framegeneID)
+#which(duplicated(data_framegeneID)) #I'm struggling to pull a list of names - I'm just able to pull the rows that have duplicate values, Sam, you have a better idea of how to pull a list of genes that are present in all 3 tissues?
+#duplicates <- filter(data_framegeneID,duplicated(geneID)) #duplicated at least 2x, create 3 lists
+#dup_tassel <- filter(data_framegeneID,duplicated(geneID)) %>% filter(Sheet=="tassel") %>% pull(geneID)
+#str(dup_tassel)
+#head(dup_tassel)#run for flagleaf
+
+#filter(data_framegeneID,duplicated(geneID)) %>% str()
+#run filter for flagleaf and tassel, use those 2 sets, go to og frame, where sheets = ear, && gene ID must be in vector for flagleaf and tasse)
+#filter(data_framegeneID,Sheet=="ear"&geneID %in%dup_tassel) #run again with flagleaf
+#filter(data_framegeneID,Sheet=="flagleaf"&geneID %in%dup_tassel)
+
+
+
+
+
+
+# (all genes expressed among sets 1 and 2) Comparing data_frame2 to data_frame for unique gene titles (("Supplemental8_SPE_PAV_gene_list (COPY).xlsx") and ("Supplemental_dataset_S1.xlsx")) --------------
+
+#data_frame2 <- read_xlsx("Supplemental8_SPE_PAV_gene_list (COPY).xlsx")
+#head(data_frame2)
+#str(data_frame2)
+#data_framegeneID <- pull(data_frame,geneID)
+#head(data_framegeneID)
+#data_framegeneID2 <- pull(data_frame2,geneID)
+#str(data_framegeneID2)
+
+#data_frame3 <- c(data_framegeneID, data_framegeneID2)
+#head(data_frame3)
+#str(data_frame3)
+#unique(data_frame3) #soooo, how to I pull the whole list? This is all the unique genes between all the tissues in both of the V4 spreadsheets
+#innerjoin to join sets - 
+
+# (same genes among sets 1 and 2) Comparing data_frame2 to data_frame for gene titles that are the same "Supplemental8_SPE_PAV_gene_list (COPY).xlsx") and ("Supplemental_dataset_S1.xlsx")) ---------
+
+#same_1and2 <- generics::intersect(data_framegeneID, data_framegeneID2)
+#str(same_1and2) #did this work????
+
+#Options to chunk the data of SPE genes: 
+#accumulation of all genes present in all datasets (looking for unique)
+#genes present in every tissue across all datasets 
+#genes present in all datasets (doesn't need to be any every tissue/cross)
+#for crosses, turn into binary, use mutate and sum coll.
+#turn into binary, stringr - package in tidyr
+#to combine B and X, mutate
+
+# I want to build a master spreadsheet combining supp 1 and supp 8 by organizing by geneID, sheet/tissue, crosses in binary (1 for )
+# Step one, mutate x and NA in crosses in Supp 1 data_frame to binary x = 1 NA = 0
+#head(data_frame)
+#data_frame %>% 
+#mutate(across(c(SPE_B_A554_E, SPE_X_A554_E, SPE_B_H84_E, SPE_X_H84_E, SPE_B_H99_E, SPE_X_H99_E, SPE_B_Mo17_E, SPE_X_Mo17_E, SPE_B_Oh43_E, SPE_X_Oh43_E, SPE_B_W64A_E, SPE_X_W64A_E),
+#    ~factor(ifelse(.x == "x",1,0)))) 
+#head(data_frame)#wooo this works, all x = 1 and NA = 0)
+# Step two, rearrange supplementa8 into tissuT|geneID|female/cross||||
+#data_frame2 <- read_xlsx("Supplemental8_SPE_PAV_gene_list (COPY).xlsx")
+#head(data_frame2)
+#mergedata_frame2 <- data_frame2 %>% 
+#  group_by(geneID, Tissue)
+#head(mergedata_frame2)
+#str(mergedata_frame2)
+#str(data_frame2)
+
+#reshape(data_frame2,idvar = "geneID", timevar ="Female", direction ="wide")
+#head(data_frame2)
+
+#V3 to V4 conversions for dataset 3 - Did I do this remotely right?
+#V3V4_conversions <- read_xlsx("V3 V4 conversions.xlsx")
+#head(V3V4_conversions)
+#str(V3V4_conversions)
+#v3dataframe <- read_xlsx("1-s2.0-S0960982217316603-mmc3 (COPY).xlsx")
+#head(v3dataframe) #lowercasev
+#filter(V3V4_conversions, v3geneID %in% v3dataframe$"v3geneID")
+#converted_data3 <- inner_join(x=v3dataframe,y=(V3V4_conversions),by="v3geneID")
+#str(converted_data3)
+#head(converted_data3)
 
 
 
